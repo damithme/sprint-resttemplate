@@ -7,6 +7,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
+import org.springframework.web.client.AsyncRestTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -62,7 +65,7 @@ public class RestTemplateServiceApplication {
 
 		RestTemplate restTemplate = new RestTemplate();
 		User result = restTemplate.postForObject(url, user, User.class);
-		System.out.println(result.getFirstName());
+		System.out.println(result.getFirstName() + " " + result.getLastName());
 	}
 
 	private static void putRequest() {
@@ -104,9 +107,38 @@ public class RestTemplateServiceApplication {
 		HttpEntity<User> request = new HttpEntity<>(user);
 		ResponseEntity<User> response = restTemplate
 				.exchange(url, HttpMethod.POST, request, User.class);
+
 		System.out.println(response.getStatusCode());
 		System.out.println(response.getBody());
 	}
+
+	private static void postExchangeWithCallback() {
+		String url = "http://localhost:8080/user";
+		AsyncRestTemplate restTemplate = new AsyncRestTemplate();
+
+		User user = new User();
+		user.setId(1L);
+		user.setFirstName("John");
+		user.setLastName("Smith");
+
+		HttpEntity<User> request = new HttpEntity<>(user);
+		ListenableFuture<ResponseEntity<String>> response = restTemplate
+				.exchange(url, HttpMethod.POST, request, String.class);
+		response.addCallback(new ListenableFutureCallback<ResponseEntity<String>>() {
+			@Override
+			public void onFailure(Throwable throwable) {
+				//do something
+			}
+
+			@Override
+			public void onSuccess(ResponseEntity<String> response) {
+				System.out.println(response.getBody());
+			}
+		});
+
+
+	}
+
 	private static void getResponseEntity() throws IOException {
 
 		String url = "http://localhost:8080/user/1";
@@ -115,6 +147,7 @@ public class RestTemplateServiceApplication {
 		HttpHeaders httpHeaders = restTemplate.headForHeaders(url);
 
 		ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+		System.out.println(response);
 
 		ObjectMapper objectMapper = new ObjectMapper();
 		User user = objectMapper.readValue(response.getBody(), User.class);
